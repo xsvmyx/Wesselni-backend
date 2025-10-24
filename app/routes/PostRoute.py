@@ -13,7 +13,7 @@ from typing import List
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 #le mapping est automatique entre l'objet Post et PostResponse 
-@router.post("/new", response_model=PostResponse)
+@router.post("/new_post", response_model=PostResponse)
 async def create_post(post_data: PostCreate, db: AsyncSession = Depends(get_db), token: str = ""):
     if not token:
         raise HTTPException(status_code=401, detail="Token required")
@@ -142,6 +142,7 @@ async def get_posts_with_users(db: AsyncSession = Depends(get_db)):
             User.doc
         )
         .join(User, User.id == Post.user_id)
+        .order_by(Post.created_at.desc())
     )
 
     result = await db.execute(query)

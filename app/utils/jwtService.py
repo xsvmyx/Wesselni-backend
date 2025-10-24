@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import jwt #type:ignore
 
-SECRET_KEY = "wesselni_secret_key"
+SECRET_KEY = "wesselni_socrat_key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 heures
 
