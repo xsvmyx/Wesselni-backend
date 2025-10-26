@@ -23,6 +23,7 @@ class PostResponse(PostBase):
 
 
 class PostUserResponse(BaseModel):
+    id_post:int
     id_user: int
     departure: str
     destination: str

@@ -47,26 +47,45 @@ async def create_post(post_data: PostCreate, db: AsyncSession = Depends(get_db),
     return new_post
 
 
-
-@router.get("/all_posts", response_model=List[PostResponse])
-async def get_all_posts(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Post))
-    posts = result.scalars().all()
-    return posts
-
-
-
-
-
-
-
-
-
-@router.get("/user/{user_id}", response_model=List[PostResponse])
+####################################################################
+@router.get("/user/{user_id}", response_model=List[PostUserResponse])
 async def get_user_posts(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Post).filter(Post.user_id == user_id))
-    posts = result.scalars().all()
-    return posts
+    query = (
+        select(
+            Post.id,
+            User.id.label("id_user"),
+            Post.departure,
+            Post.destination,
+            Post.departure_time,
+            User.phone,
+            Post.details,
+            User.doc
+        )
+        .join(User, User.id == Post.user_id)
+        .filter(Post.user_id == user_id)
+        .order_by(Post.created_at.desc())
+    )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    # convertir les résultats en dicts pour Pydantic
+    return [
+        {
+            "id_post":r.id,
+            "id_user": r.id_user,
+            "departure": r.departure,
+            "destination": r.destination,
+            "departure_time": r.departure_time,
+            "phone": r.phone,
+            "details": r.details,
+            "doc": r.doc,
+        }
+        for r in rows
+    ]
+
+
+##############################################################################
 
 
 @router.delete("/delete/{post_id}")
@@ -133,6 +152,7 @@ async def search_posts(
 async def get_posts_with_users(db: AsyncSession = Depends(get_db)):
     query = (
         select(
+            Post.id,
             User.id.label("id_user"),
             Post.departure,
             Post.destination,
@@ -151,6 +171,7 @@ async def get_posts_with_users(db: AsyncSession = Depends(get_db)):
     # convertir les résultats en dicts pour Pydantic
     return [
         {
+            "id_post":r.id,
             "id_user": r.id_user,
             "departure": r.departure,
             "destination": r.destination,

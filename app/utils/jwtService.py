@@ -4,7 +4,7 @@ from jose import jwt #type:ignore
 
 SECRET_KEY = "wesselni_socrat_key"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 heures
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 2
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
