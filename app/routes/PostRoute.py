@@ -1,6 +1,6 @@
 from app.schemas.tokenSchema import Token,TokenInput
 from app.schemas.PostSchema import PostCreate, PostResponse , PostUserResponse
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Query
 from app.utils.jwtService import get_token_data
 from sqlalchemy.future import select 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -124,6 +124,90 @@ async def delete_post(
     return {"message": "Post deleted successfully"}
 
 
+# @router.get("/feed", response_model=List[PostUserResponse])
+# async def get_posts_with_users(db: AsyncSession = Depends(get_db)):
+#     query = (
+#         select(
+#             Post.id,
+#             User.id.label("id_user"),
+#             Post.departure,
+#             Post.destination,
+#             Post.departure_time,
+#             User.phone,
+#             Post.details,
+#             User.doc
+#         )
+#         .join(User, User.id == Post.user_id)
+#         .order_by(Post.created_at.desc())
+#     )
+
+#     result = await db.execute(query)
+#     rows = result.all()
+
+#     # convertir les résultats en dicts pour Pydantic
+#     return [
+#         {
+#             "id_post":r.id,
+#             "id_user": r.id_user,
+#             "departure": r.departure,
+#             "destination": r.destination,
+#             "departure_time": r.departure_time,
+#             "phone": r.phone,
+#             "details": r.details,
+#             "doc": r.doc,
+#         }
+#         for r in rows
+#     ]
+
+
+
+@router.get("/feed", response_model=List[PostUserResponse])
+async def get_posts_with_users(
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(4, ge=1, le=100),   
+    offset: int = Query(0, ge=0),
+):
+    query = (
+        select(
+            Post.id,
+            User.id.label("id_user"),
+            Post.departure,
+            Post.destination,
+            Post.departure_time,
+            User.phone,
+            Post.details,
+            User.doc,
+        )
+        .join(User, User.id == Post.user_id)
+        .order_by(Post.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    return [
+        {
+            "id_post": r.id,
+            "id_user": r.id_user,
+            "departure": r.departure,
+            "destination": r.destination,
+            "departure_time": r.departure_time,
+            "phone": r.phone,
+            "details": r.details,
+            "doc": r.doc,
+        }
+        for r in rows
+    ]
+
+
+
+
+
+
+
+
 @router.get("/search", response_model=List[PostResponse])
 async def search_posts(
     departure: str,
@@ -148,37 +232,34 @@ async def search_posts(
 
 
 
-@router.get("/feed", response_model=List[PostUserResponse])
-async def get_posts_with_users(db: AsyncSession = Depends(get_db)):
-    query = (
-        select(
-            Post.id,
-            User.id.label("id_user"),
-            Post.departure,
-            Post.destination,
-            Post.departure_time,
-            User.phone,
-            Post.details,
-            User.doc
-        )
-        .join(User, User.id == Post.user_id)
-        .order_by(Post.created_at.desc())
-    )
+@router.get("/user")
+async def get_user_by_id(
+    user_id: int = Query(...),
+    token: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Token required")
 
-    result = await db.execute(query)
-    rows = result.all()
+    try:
+        get_token_data(token) 
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
-    # convertir les résultats en dicts pour Pydantic
-    return [
-        {
-            "id_post":r.id,
-            "id_user": r.id_user,
-            "departure": r.departure,
-            "destination": r.destination,
-            "departure_time": r.departure_time,
-            "phone": r.phone,
-            "details": r.details,
-            "doc": r.doc,
-        }
-        for r in rows
-    ]
+   
+    result = await db.execute(select(User).filter(User.id == user_id))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+   
+    return {
+        "id": user.id,
+        "nom": user.nom,
+        "prenom": user.prenom,
+        "wilaya": user.wilaya,
+        "commune": user.commune,
+        "telephone": user.phone,
+    }
