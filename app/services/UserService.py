@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException
 from app.models.UserModel import User
-from app.schemas.userSchema import UserCreate, UserLogin
+from app.schemas.userSchema import UserCreate, UserLogin ,UserUpdate
 from app.utils.encoder import hash_password, verify_password
 
 
@@ -46,3 +46,29 @@ async def authenticate_user(db: AsyncSession, user_data: UserLogin) -> User:
         raise HTTPException(status_code=401, detail="Incorrect phone number or password")
 
     return user
+
+
+
+
+async def update_user_info(db: AsyncSession, user_id: int, user_data: UserUpdate):
+    result = await db.execute(select(User).filter(User.id == user_id))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+
+    # Appliquer les changements
+    user.wilaya = user_data.wilaya
+    user.commune = user_data.commune
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user
+
+
+
+
+# async def delete_user(db:AsyncSession,user_id : int):
+#     result = await db.execute(delete(User).filter(User.id=))
+

@@ -35,3 +35,12 @@ class UserLogin(BaseModel):
         "from_attributes": True
     }
 
+
+
+class UserUpdate(BaseModel):
+    wilaya: str
+    commune: str
+
+    model_config = {
+        "from_attributes": True
+    }

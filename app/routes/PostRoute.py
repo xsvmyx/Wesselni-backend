@@ -1,6 +1,6 @@
 from app.schemas.tokenSchema import Token,TokenInput
 from app.schemas.PostSchema import PostCreate, PostResponse , PostUserResponse
-from fastapi import APIRouter, Depends, HTTPException,Query
+from fastapi import APIRouter, Depends, HTTPException,Query,Header
 from app.utils.jwtService import get_token_data
 from sqlalchemy.future import select 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,37 +12,41 @@ from typing import List
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
-#le mapping est automatique entre l'objet Post et PostResponse 
+
 @router.post("/new_post", response_model=PostResponse)
-async def create_post(post_data: PostCreate, db: AsyncSession = Depends(get_db), token: str = ""):
-    if not token:
-        raise HTTPException(status_code=401, detail="Token required")
+async def create_post(
+    post_data: PostCreate,
+    db: AsyncSession = Depends(get_db),
+    authorization: str = Header(...),  
+):
 
-    
-    try:
-        token_info = get_token_data(token)
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Format de token invalide")
 
-    user_id = int(token_info["user_id"])
+    token = authorization.replace("Bearer ", "")
+    token_info = get_token_data(token)
 
-    
-    result = await db.execute(select(User).filter(User.id == user_id))
+    user_id = token_info.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token invalide ou manquant")
+
+    result = await db.execute(select(User).filter(User.id == int(user_id)))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
-    
     new_post = Post(
-        departure = post_data.departure,
-        destination= post_data.destination,
+        departure=post_data.departure,
+        destination=post_data.destination,
         departure_time=post_data.departure_time,
-        details = post_data.details,
-        user_id=user_id
+        details=post_data.details,
+        user_id=int(user_id)
     )
+
     db.add(new_post)
     await db.commit()
     await db.refresh(new_post)
+
 
     return new_post
 
@@ -92,12 +96,13 @@ async def get_user_posts(user_id: int, db: AsyncSession = Depends(get_db)):
 async def delete_post(
     post_id: int,
     db: AsyncSession = Depends(get_db),
-    token: str = ""
+    authorization: str = Header(...),  
 ):
     
-    if not token:
-        raise HTTPException(status_code=401, detail="Token required")
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Format de token invalide")
 
+    token = authorization.replace("Bearer ", "")
     
     try:
         token_info = get_token_data(token)
@@ -164,9 +169,27 @@ async def delete_post(
 @router.get("/feed", response_model=List[PostUserResponse])
 async def get_posts_with_users(
     db: AsyncSession = Depends(get_db),
-    limit: int = Query(4, ge=1, le=100),   
+    authorization: str = Header(...),  
+    limit: int = Query(4, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Format de token invalide")
+
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        token_data = get_token_data(token)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Token invalide: {str(e)}")
+
+    # Optionnel : si tu veux t’assurer que l’utilisateur existe toujours
+    user_id = token_data.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token invalide ou manquant")
+
+    # 🔹 Récupération des posts
     query = (
         select(
             Post.id,
@@ -207,7 +230,6 @@ async def get_posts_with_users(
 
 
 
-
 @router.get("/search", response_model=List[PostResponse])
 async def search_posts(
     departure: str,
@@ -235,26 +257,23 @@ async def search_posts(
 @router.get("/user")
 async def get_user_by_id(
     user_id: int = Query(...),
-    token: str = Query(...),
+    authorization: str = Header(...),
     db: AsyncSession = Depends(get_db),
 ):
     
-    if not token:
-        raise HTTPException(status_code=401, detail="Token required")
-
+    token = authorization.replace("Bearer ", "")
+    
     try:
-        get_token_data(token) 
+        get_token_data(token)
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-   
     result = await db.execute(select(User).filter(User.id == user_id))
     user = result.scalars().first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-   
     return {
         "id": user.id,
         "nom": user.nom,

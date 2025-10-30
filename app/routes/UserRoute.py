@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
-from app.schemas.userSchema import UserCreate, UserLogin
+from app.schemas.userSchema import UserCreate, UserLogin , UserUpdate
 from app.schemas.tokenSchema import Token,TokenInput
-from app.services.UserService import create_user, authenticate_user
+from app.services.UserService import create_user, authenticate_user,update_user_info
 from app.utils.jwtService import create_access_token,get_token_data
 
 router = APIRouter(tags=["Users"])
@@ -30,13 +30,50 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
 
 
 
-@router.post("/decode_token")
-async def decode_token_route(data: TokenInput):
-    """
-    Prend un token JWT en entrée et retourne les informations décodées.
-    """
-    try:
-        decoded = get_token_data(data.token)
-        return {"decoded_token": decoded}
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+@router.put("/update")
+async def update_user_endpoint(
+    data: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    authorization: str = Header(...),  
+):
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Format de token invalide")
+
+    token = authorization.replace("Bearer ", "")
+    token_data = get_token_data(token)
+
+ 
+    user_id = token_data.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token invalide ou manquant")
+
+    user = await update_user_info(db, int(user_id), data)
+
+    return {
+        "message": "Utilisateur mis à jour avec succès",
+        "user": {
+            "id": user.id,
+            "wilaya": user.wilaya,
+            "commune": user.commune
+        }
+    }
+
+
+
+
+
+# @router.post("/decode_token")
+# async def decode_token_route(data: TokenInput):
+#     """
+#     Prend un token JWT en entrée et retourne les informations décodées.
+#     """
+#     try:
+#         decoded = get_token_data(data.token)
+#         return {"decoded_token": decoded}
+#     except Exception as e:
+#         raise HTTPException(status_code=401, detail=str(e))
+    
+
+
+
