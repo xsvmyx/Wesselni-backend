@@ -14,5 +14,5 @@ class User(Base):
     password = Column(String, nullable=False)  
     doc = Column(String, nullable=True)  #pour le scan plus tard
 
-    posts = relationship("Post", back_populates="user", cascade="all, delete")
+    posts = relationship("Post", back_populates="user", cascade="all, delete",passive_deletes=True)
     

@@ -230,30 +230,6 @@ async def get_posts_with_users(
 
 
 
-@router.get("/search", response_model=List[PostResponse])
-async def search_posts(
-    departure: str,
-    destination: str,
-    db: AsyncSession = Depends(get_db)
-):
-   
-    result = await db.execute(
-        select(Post).filter(
-            Post.departure.ilike(f"%{departure}%"),
-            Post.destination.ilike(f"%{destination}%")
-        )
-    )
-
-    posts = result.scalars().all()
-
-    if not posts:
-        raise HTTPException(status_code=404, detail="No posts found")
-
-    return posts
-
-
-
-
 @router.get("/user")
 async def get_user_by_id(
     user_id: int = Query(...),
@@ -282,3 +258,39 @@ async def get_user_by_id(
         "commune": user.commune,
         "telephone": user.phone,
     }
+
+
+
+@router.get("/search")
+async def search_posts(query: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Post)
+        .filter(Post.destination.ilike(f"%{query}%"))
+    )
+    posts = result.scalars().all()
+    return posts
+
+
+
+
+
+
+
+@router.get("/search/suggestions")
+async def search_suggestions(
+    query: str = Query(..., min_length=1),
+    db: AsyncSession = Depends(get_db)
+):
+    
+    if not query.strip():
+        return []
+
+    stmt = (
+        select(Post.id, Post.departure, Post.destination, Post.departure_time)
+        .where(Post.destination.ilike(f"%{query}%"))
+        .limit(10)
+    )
+
+    result = await db.execute(stmt)
+    posts = result.mappings().all()  
+    return posts

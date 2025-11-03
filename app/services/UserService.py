@@ -68,7 +68,14 @@ async def update_user_info(db: AsyncSession, user_id: int, user_data: UserUpdate
 
 
 
+async def delete_user(db: AsyncSession, user_id: int):
+    result = await db.execute(select(User).filter(User.id == user_id))
+    user = result.scalars().first()
 
-# async def delete_user(db:AsyncSession,user_id : int):
-#     result = await db.execute(delete(User).filter(User.id=))
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
 
+    await db.delete(user)
+    await db.commit()
+
+    return {"message": "Utilisateur et ses publications supprimés avec succès"}
