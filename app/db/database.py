@@ -1,10 +1,10 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
+from app.config import DATABASE_URL
 
 
 
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/wesselni"
 
 
 

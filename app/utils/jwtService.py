@@ -2,13 +2,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import jwt  # type:ignore
 from fastapi import HTTPException
-
+from app.config import SECRET_KEY,ALGORITHM
 # ========================
 # CONFIGURATION
 # ========================
 
-SECRET_KEY = "wesselni_socrat_key"
-ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 2  # 2 jours
 
 
