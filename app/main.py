@@ -1,11 +1,14 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.routes import UserRoute,PostRoute  
+from app.routes import UserRoute,PostRoute , ImagesRoute
 from apscheduler.schedulers.asyncio import AsyncIOScheduler #type:ignore
 from datetime import datetime, timedelta, timezone
 from app.models.PostModel import Post
 from app.db.database import AsyncSessionLocal
 from sqlalchemy.future import select 
+from fastapi.staticfiles import StaticFiles
+import os
+
 
 
 async def delete_old_posts():
@@ -45,9 +48,16 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(UserRoute.router)
 app.include_router(PostRoute.router)
-
+app.include_router(ImagesRoute.router)
 
 
 @app.get("/")
 def read_root():
     return {"message": "Bienvenue sur Wesselni!"}
+
+
+
+if not os.path.exists("uploads"):
+    os.makedirs("uploads")
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
