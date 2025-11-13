@@ -189,7 +189,7 @@ async def get_posts_with_users(
     if not user_id:
         raise HTTPException(status_code=401, detail="Token invalide ou manquant")
 
-    # 🔹 Récupération des posts
+    #  Récupération des posts
     query = (
         select(
             Post.id,
@@ -257,6 +257,7 @@ async def get_user_by_id(
         "wilaya": user.wilaya,
         "commune": user.commune,
         "telephone": user.phone,
+        "doc":user.doc if user.doc else None
     }
 
 
