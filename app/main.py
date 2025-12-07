@@ -6,9 +6,6 @@ from datetime import datetime, timedelta, timezone
 from app.models.PostModel import Post
 from app.db.database import AsyncSessionLocal
 from sqlalchemy.future import select 
-from fastapi.staticfiles import StaticFiles
-import os
-
 
 
 async def delete_old_posts():
@@ -56,7 +53,5 @@ def read_root():
     return {"message": "Bienvenue sur Wesselni!"}
 
 
-if not os.path.exists("uploads"):
-    os.makedirs("uploads")
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+

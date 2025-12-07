@@ -14,4 +14,6 @@ DATABASE_URL = os.getenv("DATABASE_URL").replace(
     "postgresql+asyncpg://"
 )
 
-
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SERVICE_ROLE_KEY = os.getenv("SERVICE_ROLE_KEY")
+BUCKET_NAME = "uploads"  

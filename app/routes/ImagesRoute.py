@@ -5,9 +5,13 @@ from sqlalchemy.future import select
 from app.db.database import get_db
 from app.utils.jwtService import get_token_data
 from app.models.UserModel import User
-
+from supabase import create_client
+from app.config import SUPABASE_URL, SERVICE_ROLE_KEY, BUCKET_NAME
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
+
+supabase = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
+ 
 
 @router.post("/setpfp")
 async def set_profile_picture(
@@ -15,44 +19,44 @@ async def set_profile_picture(
     db: AsyncSession = Depends(get_db),
     authorization: str = Header(...),
 ):
-    
+    # Vérification du token
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid token format")
 
     token = authorization.replace("Bearer ", "")
     token_info = get_token_data(token)
     user_id = token_info.get("user_id")
-
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or missing token")
 
-    
+    # Vérifier le type de fichier
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
 
-   
-    upload_dir = "uploads"
-    os.makedirs(upload_dir, exist_ok=True)
-
-    #Nom du fichier basé sur l'ID de l'utilisateur
+    # Lire le fichier
+    file_bytes = await file.read()
     ext = os.path.splitext(file.filename)[1]
     filename = f"user_{user_id}{ext}"
-    path = os.path.join(upload_dir, filename)
 
-    try:
-        
-        with open(path, "wb") as f:
-            f.write(await file.read())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+    # Upload sur Supabase
+    response = supabase.storage.from_(BUCKET_NAME).upload(
+        filename, file_bytes,
+        {"cacheControl": "3600", "upsert": "true"}
+    )
 
-    
-    image_url = f"/uploads/{filename}"
+    # Check erreur
+    error = getattr(response, "error", None) or getattr(response, "error_message", None)
+    if error:
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {error}")
 
-    # Mise à jour du champ 'doc' dans la table User
+
+
+    # Récupérer l'URL publique
+    image_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
+
+    # Mettre à jour l'utilisateur dans la DB
     result = await db.execute(select(User).filter(User.id == int(user_id)))
     user = result.scalars().first()
-
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -65,9 +69,5 @@ async def set_profile_picture(
         "message": "Profile picture updated successfully",
         "url": image_url,
     }
-
-
-
-
 
 
