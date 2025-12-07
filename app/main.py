@@ -56,7 +56,6 @@ def read_root():
     return {"message": "Bienvenue sur Wesselni!"}
 
 
-
 if not os.path.exists("uploads"):
     os.makedirs("uploads")
 

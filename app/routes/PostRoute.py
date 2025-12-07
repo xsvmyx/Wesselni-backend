@@ -8,6 +8,7 @@ from app.models.PostModel import Post
 from app.models.UserModel import User
 from app.db.database import get_db
 from typing import List
+from datetime import datetime
 
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -17,15 +18,13 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 async def create_post(
     post_data: PostCreate,
     db: AsyncSession = Depends(get_db),
-    authorization: str = Header(...),  
+    authorization: str = Header(...),
 ):
-
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Format de token invalide")
 
     token = authorization.replace("Bearer ", "")
     token_info = get_token_data(token)
-
     user_id = token_info.get("user_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Token invalide ou manquant")
@@ -35,10 +34,17 @@ async def create_post(
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
+    # Conversion de la string en time pour la DB
+    try:
+        departure_time_obj = datetime.strptime(post_data.departure_time, "%I:%M %p").time()
+        # "%H:%M" si tu veux 24h
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format de departure_time invalide")
+
     new_post = Post(
         departure=post_data.departure,
         destination=post_data.destination,
-        departure_time=post_data.departure_time,
+        departure_time=departure_time_obj,
         details=post_data.details,
         user_id=int(user_id)
     )
@@ -47,8 +53,16 @@ async def create_post(
     await db.commit()
     await db.refresh(new_post)
 
-
-    return new_post
+    
+    return PostResponse(
+        id=new_post.id,
+        departure=new_post.departure,
+        destination=new_post.destination,
+        departure_time=new_post.departure_time.strftime("%I:%M %p"),
+        details=new_post.details,
+        created_at=new_post.created_at,
+        user_id=new_post.user_id
+    )
 
 
 ####################################################################

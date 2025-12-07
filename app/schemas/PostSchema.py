@@ -5,7 +5,7 @@ from datetime import time
 class PostBase(BaseModel):
     departure: str
     destination: str
-    departure_time: time
+    departure_time: str
     details: str
     
 

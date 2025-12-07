@@ -6,6 +6,7 @@ from app.db.database import get_db
 from app.utils.jwtService import get_token_data
 from app.models.UserModel import User
 
+
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 @router.post("/setpfp")
@@ -64,3 +65,9 @@ async def set_profile_picture(
         "message": "Profile picture updated successfully",
         "url": image_url,
     }
+
+
+
+
+
+
