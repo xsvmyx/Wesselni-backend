@@ -17,3 +17,5 @@ python-dotenv
 psycopg2-binary
 apscheduler
 python-multipart==0.0.20
+
+supabase
