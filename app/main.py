@@ -53,6 +53,7 @@ def read_root():
 
 
 @app.get("/keepalive")
+@app.head("/keepalive") #uptimerobot use head requests for free
 async def keepalive():
     """Endpoint pour garder Supabase Postgres actif (éviter sommeil après 7j)"""
     try:
